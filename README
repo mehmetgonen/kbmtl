@@ -1,0 +1,21 @@
+This package contains Matlab and R implementations of the algorithms proposed in "Drug susceptibility prediction against a panel of drugs using kernelized Bayesian multitask learning", which is appearing in Bioinformatics.
+
+demo_classification.m file shows how to use the classification algorithm in Matlab.
+demo_classification.R file shows how to use the classification algorithm in R.
+demo_regression.m file shows how to use the regression algorithm in Matlab.
+demo_regression.R file shows how to use the regression algorithm in R.
+
+KBMTL methods
+-------------
+* kbmtl_semisupervised_classification_variational_train.m => training procedure for classification in Matlab
+* kbmtl_semisupervised_classification_variational_test.m => test procedure for classification in Matlab
+* kbmtl_semisupervised_classification_variational_train.R => training procedure for classification in R
+* kbmtl_semisupervised_classification_variational_test.R => test procedure for classification in R
+* kbmtl_semisupervised_regression_variational_train.m => training procedure for regression in Matlab
+* kbmtl_semisupervised_regression_variational_test.m => test procedure for regression in Matlab
+* kbmtl_semisupervised_regression_variational_train.R => training procedure for regression in R
+* kbmtl_semisupervised_regression_variational_test.R => test procedure for regression in R
+
+If you use any of the algorithms implemented in this package, please cite the following paper:
+
+Mehmet Gonen and Adam A. Margolin. Drug susceptibility prediction against a panel of drugs using kernelized Bayesian multitask learning. Bioinformatics, 30(17):i556-i563, 2014.
