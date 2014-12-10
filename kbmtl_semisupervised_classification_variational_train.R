@@ -37,14 +37,14 @@ kbmtl_semisupervised_classification_variational_train <- function(K, Y, paramete
     }
     # update H
     for (i in 1:N) {
-      indices <- which(is.nan(Y[i,]) == FALSE)
+      indices <- which(is.na(Y[i,]) == FALSE)
       H$covariance[,,i] <- chol2inv(chol(diag(1 / sigmah^2, R, R) + tcrossprod(W$mean[,indices], W$mean[,indices]) + apply(W$covariance[,,indices], 1:2, sum)))
       H$mean[,i] <- H$covariance[,,i] %*% (crossprod(A$mean, K[,i]) / sigmah^2 + tcrossprod(W$mean[,indices], F$mean[i, indices, drop = FALSE]))
     }
 
     # update W
     for (t in 1:T) {
-      indices <- which(is.nan(Y[,t]) == FALSE)
+      indices <- which(is.na(Y[,t]) == FALSE)
       W$covariance[,,t] <- chol2inv(chol(diag(1 / sigmaw^2, R, R) + tcrossprod(H$mean[,indices], H$mean[,indices]) + apply(H$covariance[,,indices], 1:2, sum)))
       W$mean[,t] <- W$covariance[,,t] %*% (H$mean[,indices] %*% F$mean[indices, t])
     }
