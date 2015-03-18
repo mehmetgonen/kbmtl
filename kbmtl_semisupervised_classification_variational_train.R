@@ -7,16 +7,16 @@ kbmtl_semisupervised_classification_variational_train <- function(K, Y, paramete
   N <- dim(K)[2]
   T <- dim(Y)[2]
   R <- parameters$R
-  sigmah <- parameters$sigmah
-  sigmaw <- parameters$sigmaw
+  sigma_h <- parameters$sigma_h
+  sigma_w <- parameters$sigma_w
 
-  Lambda <- list(shape = matrix(parameters$alpha_lambda + 0.5, D, R), scale = matrix(parameters$beta_lambda, D, R))
-  A <- list(mean = matrix(rnorm(D * R), D, R), covariance = array(diag(1, D, D), c(D, D, R)))
-  H <- list(mean = matrix(rnorm(R * N), R, N), covariance = array(diag(1, R, R), c(R, R, N)))
+  Lambda <- list(alpha = matrix(parameters$alpha_lambda + 0.5, D, R), beta = matrix(parameters$beta_lambda, D, R))
+  A <- list(mu = matrix(rnorm(D * R), D, R), sigma = array(diag(1, D, D), c(D, D, R)))
+  H <- list(mu = matrix(rnorm(R * N), R, N), sigma = array(diag(1, R, R), c(R, R, N)))
 
-  W <- list(mean = matrix(rnorm(R * T), R, T), covariance = array(diag(1, R, R), c(R, R, T)))
+  W <- list(mu = matrix(rnorm(R * T), R, T), sigma = array(diag(1, R, R), c(R, R, T)))
 
-  F <- list(mean = (abs(matrix(rnorm(N * T), N, T)) + parameters$margin) * sign(Y), covariance = matrix(1, N, T))
+  F <- list(mu = (abs(matrix(rnorm(N * T), N, T)) + parameters$margin) * sign(Y), sigma = matrix(1, N, T))
 
   KKT <- tcrossprod(K, K)
 
@@ -28,35 +28,35 @@ kbmtl_semisupervised_classification_variational_train <- function(K, Y, paramete
   for (iter in 1:parameters$iteration) {
     # update Lambda
     for (s in 1:R) {
-      Lambda$scale[,s] <- 1 / (1 / parameters$beta_lambda + 0.5 * (A$mean[,s]^2 + diag(A$covariance[,,s])))
+      Lambda$beta[,s] <- 1 / (1 / parameters$beta_lambda + 0.5 * (A$mu[,s]^2 + diag(A$sigma[,,s])))
     }
     # update A
     for (s in 1:R) {
-      A$covariance[,,s] <- chol2inv(chol(diag(as.vector(Lambda$shape[,s] * Lambda$scale[,s]), D, D) + KKT / sigmah^2))
-      A$mean[,s] <- A$covariance[,,s] %*% (tcrossprod(K, H$mean[s,,drop = FALSE]) / sigmah^2)
+      A$sigma[,,s] <- chol2inv(chol(diag(as.vector(Lambda$alpha[,s] * Lambda$beta[,s]), D, D) + KKT / sigma_h^2))
+      A$mu[,s] <- A$sigma[,,s] %*% (tcrossprod(K, H$mu[s,,drop = FALSE]) / sigma_h^2)
     }
     # update H
     for (i in 1:N) {
       indices <- which(is.na(Y[i,]) == FALSE)
-      H$covariance[,,i] <- chol2inv(chol(diag(1 / sigmah^2, R, R) + tcrossprod(W$mean[,indices, drop = FALSE], W$mean[,indices, drop = FALSE]) + apply(W$covariance[,,indices, drop = FALSE], 1:2, sum)))
-      H$mean[,i] <- H$covariance[,,i] %*% (crossprod(A$mean, K[,i]) / sigmah^2 + tcrossprod(W$mean[,indices, drop = FALSE], F$mean[i, indices, drop = FALSE]))
+      H$sigma[,,i] <- chol2inv(chol(diag(1 / sigma_h^2, R, R) + tcrossprod(W$mu[,indices, drop = FALSE], W$mu[,indices, drop = FALSE]) + apply(W$sigma[,,indices, drop = FALSE], 1:2, sum)))
+      H$mu[,i] <- H$sigma[,,i] %*% (crossprod(A$mu, K[,i]) / sigma_h^2 + tcrossprod(W$mu[,indices, drop = FALSE], F$mu[i, indices, drop = FALSE]))
     }
 
     # update W
     for (t in 1:T) {
       indices <- which(is.na(Y[,t]) == FALSE)
-      W$covariance[,,t] <- chol2inv(chol(diag(1 / sigmaw^2, R, R) + tcrossprod(H$mean[,indices, drop = FALSE], H$mean[,indices, drop = FALSE]) + apply(H$covariance[,,indices, drop = FALSE], 1:2, sum)))
-      W$mean[,t] <- W$covariance[,,t] %*% (H$mean[,indices] %*% F$mean[indices, t, drop = FALSE])
+      W$sigma[,,t] <- chol2inv(chol(diag(1 / sigma_w^2, R, R) + tcrossprod(H$mu[,indices, drop = FALSE], H$mu[,indices, drop = FALSE]) + apply(H$sigma[,,indices, drop = FALSE], 1:2, sum)))
+      W$mu[,t] <- W$sigma[,,t] %*% (H$mu[,indices] %*% F$mu[indices, t, drop = FALSE])
     }
 
     # update F
-    output <- crossprod(H$mean, W$mean)
+    output <- crossprod(H$mu, W$mu)
     alpha_norm <- lower - output
     beta_norm <- upper - output
     normalization <- pnorm(beta_norm) - pnorm(alpha_norm)
     normalization[which(normalization == 0)] <- 1
-    F$mean <- output + (dnorm(alpha_norm) - dnorm(beta_norm)) / normalization
-    F$covariance <- 1 + (alpha_norm * dnorm(alpha_norm) - beta_norm * dnorm(beta_norm)) / normalization - (dnorm(alpha_norm) - dnorm(beta_norm))^2 / normalization^2
+    F$mu <- output + (dnorm(alpha_norm) - dnorm(beta_norm)) / normalization
+    F$sigma <- 1 + (alpha_norm * dnorm(alpha_norm) - beta_norm * dnorm(beta_norm)) / normalization - (dnorm(alpha_norm) - dnorm(beta_norm))^2 / normalization^2
   }
 
   state <- list(Lambda = Lambda, A = A, W = W, parameters = parameters)

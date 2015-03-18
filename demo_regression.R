@@ -28,10 +28,10 @@ parameters$R <- 20
 parameters$seed <- 1606
 
 #set the standard deviation of hidden representations
-parameters$sigmah <- 0.1
+parameters$sigma_h <- 0.1
 
 #set the standard deviation of weight parameters
-parameters$sigmaw <- 1.0
+parameters$sigma_w <- 1.0
 
 #initialize the kernel and target outputs for training
 Ktrain <- ?? #should be an Ntra x Ntra matrix containing similarity values between training samples
@@ -47,4 +47,4 @@ Ktest <- ?? #should be an Ntra x Ntest matrix containing similarity values betwe
 prediction <- kbmtl_semisupervised_regression_variational_test(Ktest, state)
 
 #display the predicted probabilities
-print(prediction$Y$mean)
+print(prediction$Y$mu)

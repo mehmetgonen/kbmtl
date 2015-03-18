@@ -7,45 +7,45 @@ kbmtl_semisupervised_regression_variational_train <- function(K, Y, parameters) 
   N <- dim(K)[2]
   T <- dim(Y)[2]
   R <- parameters$R
-  sigmah <- parameters$sigmah
-  sigmaw <- parameters$sigmaw
+  sigma_h <- parameters$sigma_h
+  sigma_w <- parameters$sigma_w
 
-  Lambda <- list(shape = matrix(parameters$alpha_lambda + 0.5, D, R), scale = matrix(parameters$beta_lambda, D, R))
-  A <- list(mean = matrix(rnorm(D * R), D, R), covariance = array(diag(1, D, D), c(D, D, R)))
-  H <- list(mean = matrix(rnorm(R * N), R, N), covariance = array(diag(1, R, R), c(R, R, N)))
+  Lambda <- list(alpha = matrix(parameters$alpha_lambda + 0.5, D, R), beta = matrix(parameters$beta_lambda, D, R))
+  A <- list(mu = matrix(rnorm(D * R), D, R), sigma = array(diag(1, D, D), c(D, D, R)))
+  H <- list(mu = matrix(rnorm(R * N), R, N), sigma = array(diag(1, R, R), c(R, R, N)))
 
-  epsilon <- list(shape = matrix(parameters$alpha_epsilon + 0.5 * colSums(!is.na(Y)), T, 1), scale = matrix(parameters$beta_epsilon, T, 1))
-  W <- list(mean = matrix(rnorm(R * T), R, T), covariance = array(diag(1, R, R), c(R, R, T)))
+  epsilon <- list(alpha = matrix(parameters$alpha_epsilon + 0.5 * colSums(!is.na(Y)), T, 1), beta = matrix(parameters$beta_epsilon, T, 1))
+  W <- list(mu = matrix(rnorm(R * T), R, T), sigma = array(diag(1, R, R), c(R, R, T)))
 
   KKT <- tcrossprod(K, K)
 
   for (iter in 1:parameters$iteration) {
     # update Lambda
     for (s in 1:R) {
-      Lambda$scale[,s] <- 1 / (1 / parameters$beta_lambda + 0.5 * (A$mean[,s]^2 + diag(A$covariance[,,s])))
+      Lambda$beta[,s] <- 1 / (1 / parameters$beta_lambda + 0.5 * (A$mu[,s]^2 + diag(A$sigma[,,s])))
     }
     # update A
     for (s in 1:R) {
-      A$covariance[,,s] <- chol2inv(chol(diag(as.vector(Lambda$shape[,s] * Lambda$scale[,s]), D, D) + KKT / sigmah^2))
-      A$mean[,s] <- A$covariance[,,s] %*% (tcrossprod(K, H$mean[s,,drop = FALSE]) / sigmah^2)
+      A$sigma[,,s] <- chol2inv(chol(diag(as.vector(Lambda$alpha[,s] * Lambda$beta[,s]), D, D) + KKT / sigma_h^2))
+      A$mu[,s] <- A$sigma[,,s] %*% (tcrossprod(K, H$mu[s,,drop = FALSE]) / sigma_h^2)
     }
     # update H
     for (i in 1:N) {
       indices <- which(is.na(Y[i,]) == FALSE)
-      H$covariance[,,i] <- chol2inv(chol(diag(1 / sigmah^2, R, R) + tcrossprod(W$mean[,indices, drop = FALSE], W$mean[,indices, drop = FALSE] * matrix(epsilon$shape[indices] * epsilon$scale[indices], R, length(indices), byrow = TRUE)) + apply(W$covariance[,,indices, drop = FALSE] * array(matrix(epsilon$shape[indices] * epsilon$scale[indices], R * R, length(indices), byrow = TRUE), c(R, R, length(indices))), 1:2, sum)))
-      H$mean[,i] <- H$covariance[,,i] %*% (crossprod(A$mean, K[,i]) / sigmah^2 + tcrossprod(W$mean[,indices, drop = FALSE], Y[i, indices, drop = FALSE] * epsilon$shape[indices] * epsilon$scale[indices]))
+      H$sigma[,,i] <- chol2inv(chol(diag(1 / sigma_h^2, R, R) + tcrossprod(W$mu[,indices, drop = FALSE], W$mu[,indices, drop = FALSE] * matrix(epsilon$alpha[indices] * epsilon$beta[indices], R, length(indices), byrow = TRUE)) + apply(W$sigma[,,indices, drop = FALSE] * array(matrix(epsilon$alpha[indices] * epsilon$beta[indices], R * R, length(indices), byrow = TRUE), c(R, R, length(indices))), 1:2, sum)))
+      H$mu[,i] <- H$sigma[,,i] %*% (crossprod(A$mu, K[,i]) / sigma_h^2 + tcrossprod(W$mu[,indices, drop = FALSE], Y[i, indices, drop = FALSE] * epsilon$alpha[indices] * epsilon$beta[indices]))
     }
 
     # update epsilon
     for (t in 1:T) {
       indices <- which(is.na(Y[,t]) == FALSE)
-      epsilon$scale[t] <- 1 / (1 / parameters$beta_epsilon + 0.5 * (crossprod(Y[indices, t, drop = FALSE], Y[indices, t, drop = FALSE]) - 2 * crossprod(Y[indices, t, drop = FALSE], crossprod(H$mean[,indices, drop = FALSE], W$mean[,t])) + sum((tcrossprod(H$mean[,indices, drop = FALSE], H$mean[,indices, drop = FALSE]) + apply(H$covariance[,,indices, drop = FALSE], 1:2, sum)) * (tcrossprod(W$mean[,t], W$mean[,t]) + W$covariance[,,t]))));
+      epsilon$beta[t] <- 1 / (1 / parameters$beta_epsilon + 0.5 * (crossprod(Y[indices, t, drop = FALSE], Y[indices, t, drop = FALSE]) - 2 * crossprod(Y[indices, t, drop = FALSE], crossprod(H$mu[,indices, drop = FALSE], W$mu[,t])) + sum((tcrossprod(H$mu[,indices, drop = FALSE], H$mu[,indices, drop = FALSE]) + apply(H$sigma[,,indices, drop = FALSE], 1:2, sum)) * (tcrossprod(W$mu[,t], W$mu[,t]) + W$sigma[,,t]))));
     }
     # update W
     for (t in 1:T) {
       indices <- which(is.na(Y[,t]) == FALSE)
-      W$covariance[,,t] <- chol2inv(chol(diag(1 / sigmaw^2, R, R) + epsilon$shape[t] * epsilon$scale[t] * (tcrossprod(H$mean[,indices, drop = FALSE], H$mean[,indices, drop = FALSE]) + apply(H$covariance[,,indices, drop = FALSE], 1:2, sum))))
-      W$mean[,t] <- W$covariance[,,t] %*% (epsilon$shape[t] * epsilon$scale[t] * H$mean[,indices, drop = FALSE] %*% Y[indices, t, drop = FALSE])
+      W$sigma[,,t] <- chol2inv(chol(diag(1 / sigma_w^2, R, R) + epsilon$alpha[t] * epsilon$beta[t] * (tcrossprod(H$mu[,indices, drop = FALSE], H$mu[,indices, drop = FALSE]) + apply(H$sigma[,,indices, drop = FALSE], 1:2, sum))))
+      W$mu[,t] <- W$sigma[,,t] %*% (epsilon$alpha[t] * epsilon$beta[t] * H$mu[,indices, drop = FALSE] %*% Y[indices, t, drop = FALSE])
     }
   }
 

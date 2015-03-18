@@ -8,21 +8,21 @@ function state = kbmtl_semisupervised_classification_variational_train(K, Y, par
     N = size(K, 2);
     T = size(Y, 2);
     R = parameters.R;
-    sigmah = parameters.sigmah;
-    sigmaw = parameters.sigmaw;
+    sigma_h = parameters.sigma_h;
+    sigma_w = parameters.sigma_w;
 
-    Lambda.shape = (parameters.alpha_lambda + 0.5) * ones(D, R);
-    Lambda.scale = parameters.beta_lambda * ones(D, R);
-    A.mean = randn(D, R);
-    A.covariance = repmat(eye(D, D), [1, 1, R]);
-    H.mean = randn(R, N);
-    H.covariance = repmat(eye(R, R), [1, 1, N]);
+    Lambda.alpha = (parameters.alpha_lambda + 0.5) * ones(D, R);
+    Lambda.beta = parameters.beta_lambda * ones(D, R);
+    A.mu = randn(D, R);
+    A.sigma = repmat(eye(D, D), [1, 1, R]);
+    H.mu = randn(R, N);
+    H.sigma = repmat(eye(R, R), [1, 1, N]);
 
-    W.mean = randn(R, T);
-    W.covariance = repmat(eye(R, R), [1, 1, T]);
+    W.mu = randn(R, T);
+    W.sigma = repmat(eye(R, R), [1, 1, T]);
 
-    F.mean = (abs(randn(N, T)) + parameters.margin) .* sign(Y);
-    F.covariance = ones(N, T);
+    F.mu = (abs(randn(N, T)) + parameters.margin) .* sign(Y);
+    F.sigma = ones(N, T);
 
     KKT = K * K';
 
@@ -41,35 +41,35 @@ function state = kbmtl_semisupervised_classification_variational_train(K, Y, par
 
         %%%% update Lambda
         for s = 1:R
-            Lambda.scale(:, s) = 1 ./ (1 / parameters.beta_lambda + 0.5 * (A.mean(:, s).^2 + diag(A.covariance(:, :, s))));
+            Lambda.beta(:, s) = 1 ./ (1 / parameters.beta_lambda + 0.5 * (A.mu(:, s).^2 + diag(A.sigma(:, :, s))));
         end
         %%%% update A
         for s = 1:R
-            A.covariance(:, :, s) = (diag(Lambda.shape(:, s) .* Lambda.scale(:, s)) + KKT / sigmah^2) \ eye(D, D);
-            A.mean(:, s) = A.covariance(:, :, s) * (K * H.mean(s, :)' / sigmah^2);
+            A.sigma(:, :, s) = (diag(Lambda.alpha(:, s) .* Lambda.beta(:, s)) + KKT / sigma_h^2) \ eye(D, D);
+            A.mu(:, s) = A.sigma(:, :, s) * (K * H.mu(s, :)' / sigma_h^2);
         end
         %%%% update H
         for i = 1:N
             indices = ~isnan(Y(i, :));
-            H.covariance(:, :, i) = (eye(R, R) / sigmah^2 + W.mean(:, indices) * W.mean(:, indices)' + sum(W.covariance(:, :, indices), 3)) \ eye(R, R);
-            H.mean(:, i) = H.covariance(:, :, i) * (A.mean' * K(:, i) / sigmah^2 + W.mean(:, indices) * F.mean(i, indices)');
+            H.sigma(:, :, i) = (eye(R, R) / sigma_h^2 + W.mu(:, indices) * W.mu(:, indices)' + sum(W.sigma(:, :, indices), 3)) \ eye(R, R);
+            H.mu(:, i) = H.sigma(:, :, i) * (A.mu' * K(:, i) / sigma_h^2 + W.mu(:, indices) * F.mu(i, indices)');
         end
 
         %%%% update W
         for t = 1:T
             indices = ~isnan(Y(:, t));
-            W.covariance(:, :, t) = (eye(R, R) / sigmaw^2 + H.mean(:, indices) * H.mean(:, indices)' + sum(H.covariance(:, :, indices), 3)) \ eye(R, R);
-            W.mean(:, t) = W.covariance(:, :, t) * (H.mean(:, indices) * F.mean(indices, t));
+            W.sigma(:, :, t) = (eye(R, R) / sigma_w^2 + H.mu(:, indices) * H.mu(:, indices)' + sum(H.sigma(:, :, indices), 3)) \ eye(R, R);
+            W.mu(:, t) = W.sigma(:, :, t) * (H.mu(:, indices) * F.mu(indices, t));
         end
 
         %%%% update F
-        output = H.mean' * W.mean;
+        output = H.mu' * W.mu;
         alpha_norm = lower - output;
         beta_norm = upper - output;
         normalization = normcdf(beta_norm) - normcdf(alpha_norm);
         normalization(normalization == 0) = 1;
-        F.mean = output + (normpdf(alpha_norm) - normpdf(beta_norm)) ./ normalization;
-        F.covariance = 1 + (alpha_norm .* normpdf(alpha_norm) - beta_norm .* normpdf(beta_norm)) ./ normalization - (normpdf(alpha_norm) - normpdf(beta_norm)).^2 ./ normalization.^2;
+        F.mu = output + (normpdf(alpha_norm) - normpdf(beta_norm)) ./ normalization;
+        F.sigma = 1 + (alpha_norm .* normpdf(alpha_norm) - beta_norm .* normpdf(beta_norm)) ./ normalization - (normpdf(alpha_norm) - normpdf(beta_norm)).^2 ./ normalization.^2;
     end
 
     state.Lambda = Lambda;
