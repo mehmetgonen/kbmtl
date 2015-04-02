@@ -52,8 +52,7 @@ function state = kbmtl_semisupervised_regression_variational_train(K, Y, paramet
         %%%% update epsilon
         for t = 1:T
             indices = ~isnan(Y(:, t));
-            epsilon.beta(t) = 1 / (1 / parameters.beta_epsilon + 0.5 * (Y(indices, t)' * Y(indices, t) - 2 * Y(indices, t)' * H.mu(:, indices)' * W.mu(:, t) ...
-                                                                         + sum(sum((H.mu(:, indices) * H.mu(:, indices)' + sum(H.sigma(:, :, indices), 3)) .* (W.mu(:, t) * W.mu(:, t)' + W.sigma(:, :, t))))));
+            epsilon.beta(t) = 1 / (1 / parameters.beta_epsilon + 0.5 * (Y(indices, t)' * Y(indices, t) - 2 * Y(indices, t)' * H.mu(:, indices)' * W.mu(:, t) + sum(sum((H.mu(:, indices) * H.mu(:, indices)' + sum(H.sigma(:, :, indices), 3)) .* (W.mu(:, t) * W.mu(:, t)' + W.sigma(:, :, t))))));
         end
         %%%% update W
         for t = 1:T
