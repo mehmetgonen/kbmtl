@@ -1,5 +1,3 @@
-# Mehmet Gonen (mehmet.gonen@gmail.com)
-
 kbmtl_semisupervised_classification_variational_test <- function(K, state) {
   N <- dim(K)[2]
   T <- dim(state$W$mu)[2]

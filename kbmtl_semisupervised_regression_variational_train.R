@@ -1,5 +1,3 @@
-# Mehmet Gonen (mehmet.gonen@gmail.com)
-
 kbmtl_semisupervised_regression_variational_train <- function(K, Y, parameters) {
   set.seed(parameters$seed)
 
