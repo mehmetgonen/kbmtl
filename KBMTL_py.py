@@ -53,14 +53,14 @@ class KBMTL_R():
         the parameters of KBMTL. Must be in dictionary format.
         """
         if kbmtl_params is None:
-            par ={'alpha_lambda':1,'beta_lambda':1,'alpha_epsilon':1,'beta_epsilon':1,
+            kbmtl_params ={'alpha_lambda':1,'beta_lambda':1,'alpha_epsilon':1,'beta_epsilon':1,
                     'iteration':20,'R':20,'sigma_w':1.0,'sigma_h':0.1}
             # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4147917/
             # we have considered 200 iterations and gamma prior values (both α and β) of one. Subspace dimensionality has been considered to be 20,
             # and the standard deviation of hidden representations and weight parameters are selected to be the defaults 0.1 and one, respectively.
             # https://www.mdpi.com/1999-4893/9/4/77/htm
 
-        self.par = pd.DataFrame(data=par,index=[0])
+        self.par = pd.DataFrame(data=kbmtl_params, index=[0])
 
         # Self.kernel should be a callable.
         if kernel_type == 'rbf':
