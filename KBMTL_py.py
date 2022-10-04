@@ -101,7 +101,7 @@ class KBMTL_R():
         Ktest = self.kernel(self.x_train, x_test)
 
         with localconverter(ro.default_converter + numpy2ri.converter):
-            r_pred = kbmtl_semisupervised_regression_variational_test(Ktest,self.state)
+            r_pred = kbmtl_semisupervised_regression_variational_test(Ktest,self.state)[1][0] # keep only $Y$mu
         with localconverter(ro.default_converter + pandas2ri.converter):
             pred = ro.conversion.rpy2py(r_pred)
         return pred
